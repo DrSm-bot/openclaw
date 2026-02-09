@@ -309,8 +309,6 @@ export function buildAgentSystemPrompt(params: {
 
   const hasGateway = availableTools.has("gateway");
   const readToolName = resolveToolName("read");
-  const execToolName = resolveToolName("exec");
-  const processToolName = resolveToolName("process");
   const extraSystemPrompt = params.extraSystemPrompt?.trim();
   const ownerNumbers = (params.ownerNumbers ?? []).map((value) => value.trim()).filter(Boolean);
   const ownerLine =
@@ -367,36 +365,27 @@ export function buildAgentSystemPrompt(params: {
   const lines = [
     "You are a personal assistant running inside OpenClaw.",
     "",
-    "## Tooling",
-    "Tool availability (filtered by policy):",
-    "Tool names are case-sensitive. Call tools exactly as listed.",
-    toolLines.length > 0
-      ? toolLines.join("\n")
+    ...(toolLines.length > 0
+      ? [
+          "## Tooling",
+          "Tool availability (filtered by policy):",
+          "Tool names are case-sensitive. Call tools exactly as listed.",
+          toolLines.join("\n"),
+          "TOOLS.md does not control tool availability; it is user guidance for how to use external tools.",
+          "If a task is more complex or takes longer, spawn a sub-agent. It will do the work for you and ping you when it's done. You can always check up on it.",
+          "",
+          "## Tool Call Style",
+          "Default: do not narrate routine, low-risk tool calls (just call the tool).",
+          "Narrate only when it helps: multi-step work, complex/challenging problems, sensitive actions (e.g., deletions), or when the user explicitly asks.",
+          "Keep narration brief and value-dense; avoid repeating obvious steps.",
+          "Use plain human language for narration unless in a technical context.",
+          "",
+        ]
       : [
-          "Pi lists the standard tools above. This runtime enables:",
-          "- grep: search file contents for patterns",
-          "- find: find files by glob pattern",
-          "- ls: list directory contents",
-          "- apply_patch: apply multi-file patches",
-          `- ${execToolName}: run shell commands (supports background via yieldMs/background)`,
-          `- ${processToolName}: manage background exec sessions`,
-          "- browser: control openclaw's dedicated browser",
-          "- canvas: present/eval/snapshot the Canvas",
-          "- nodes: list/describe/notify/camera/screen on paired nodes",
-          "- cron: manage cron jobs and wake events (use for reminders; when scheduling a reminder, write the systemEvent text as something that will read like a reminder when it fires, and mention that it is a reminder depending on the time gap between setting and firing; include recent context in reminder text if appropriate)",
-          "- sessions_list: list sessions",
-          "- sessions_history: fetch session history",
-          "- sessions_send: send to another session",
-        ].join("\n"),
-    "TOOLS.md does not control tool availability; it is user guidance for how to use external tools.",
-    "If a task is more complex or takes longer, spawn a sub-agent. It will do the work for you and ping you when it's done. You can always check up on it.",
-    "",
-    "## Tool Call Style",
-    "Default: do not narrate routine, low-risk tool calls (just call the tool).",
-    "Narrate only when it helps: multi-step work, complex/challenging problems, sensitive actions (e.g., deletions), or when the user explicitly asks.",
-    "Keep narration brief and value-dense; avoid repeating obvious steps.",
-    "Use plain human language for narration unless in a technical context.",
-    "",
+          "## Tooling",
+          "No tools are available for this session. Respond using only your knowledge and reasoning.",
+          "",
+        ]),
     ...buildSafetySection(),
     "## OpenClaw CLI Quick Reference",
     "OpenClaw is controlled via subcommands. Do not invent commands.",
@@ -551,8 +540,9 @@ export function buildAgentSystemPrompt(params: {
     }
   }
 
-  // Skip silent replies for subagent/none modes
-  if (!isMinimal) {
+  // Skip silent replies for subagent/none modes, or when no tools (simple chatbot)
+  const skipComplexInstructions = isMinimal || toolLines.length === 0;
+  if (!skipComplexInstructions) {
     lines.push(
       "## Silent Replies",
       `When you have nothing to say, respond with ONLY: ${SILENT_REPLY_TOKEN}`,
@@ -569,8 +559,8 @@ export function buildAgentSystemPrompt(params: {
     );
   }
 
-  // Skip heartbeats for subagent/none modes
-  if (!isMinimal) {
+  // Skip heartbeats for subagent/none modes, or when no tools (simple chatbot mode)
+  if (!skipComplexInstructions) {
     lines.push(
       "## Heartbeats",
       heartbeatPromptLine,

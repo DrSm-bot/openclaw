@@ -20,6 +20,12 @@ describe("tool-policy", () => {
     expect(resolveToolProfilePolicy("nope")).toBeUndefined();
   });
 
+  it("resolves none profile with deny-all policy", () => {
+    const none = resolveToolProfilePolicy("none");
+    expect(none?.deny).toContain("*");
+    expect(none?.allow).toBeUndefined();
+  });
+
   it("includes core tool groups in group:openclaw", () => {
     const group = TOOL_GROUPS["group:openclaw"];
     expect(group).toContain("browser");
