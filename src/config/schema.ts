@@ -320,6 +320,7 @@ const FIELD_LABELS: Record<string, string> = {
   "messages.ackReaction": "Ack Reaction Emoji",
   "messages.ackReactionScope": "Ack Reaction Scope",
   "messages.inbound.debounceMs": "Inbound Message Debounce (ms)",
+  "messages.inbound.userContextLabels": "Inbound Context Labels",
   "talk.apiKey": "Talk API Key",
   "channels.whatsapp": "WhatsApp",
   "channels.telegram": "Telegram",

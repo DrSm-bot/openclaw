@@ -208,6 +208,9 @@ export async function runPreparedReply(
   const baseBodyFinal = isBareSessionReset ? BARE_SESSION_RESET_PROMPT : baseBody;
   const inboundUserContext = buildInboundUserContextPrefix(
     isNewSession ? sessionCtx : { ...sessionCtx, ThreadStarterBody: undefined },
+    {
+      labels: cfg.messages?.inbound?.userContextLabels,
+    },
   );
   const baseBodyForPrompt = isBareSessionReset
     ? baseBodyFinal
