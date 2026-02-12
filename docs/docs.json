@@ -991,10 +991,6 @@
                 ]
               },
               {
-                "group": "Hooks",
-                "pages": ["hooks/soul-evil"]
-              },
-              {
                 "group": "Media and devices",
                 "pages": [
                   "nodes/index",
@@ -1508,10 +1504,6 @@
                   "zh-CN/automation/poll",
                   "zh-CN/automation/auth-monitoring"
                 ]
-              },
-              {
-                "group": "Hooks",
-                "pages": ["zh-CN/hooks/soul-evil"]
               },
               {
                 "group": "媒体与设备",
