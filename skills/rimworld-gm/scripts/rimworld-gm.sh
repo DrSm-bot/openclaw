@@ -2,6 +2,7 @@
 set -euo pipefail
 
 BASE_URL="${RIMWORLD_GM_URL:-http://localhost:18800}"
+TOKEN="${RIMWORLD_GM_TOKEN:-}"
 
 usage() {
   cat <<EOF
@@ -12,7 +13,8 @@ Usage:
   rimworld-gm.sh message <text> [type]
 
 Environment:
-  RIMWORLD_GM_URL   Override API base URL (default: http://localhost:18800)
+  RIMWORLD_GM_URL    Override API base URL (default: http://localhost:18800)
+  RIMWORLD_GM_TOKEN  Optional Bearer token (required in LAN mode)
 EOF
 }
 
@@ -32,18 +34,36 @@ as_bool() {
   esac
 }
 
+curl_auth_args() {
+  if [[ -n "$TOKEN" ]]; then
+    printf '%s\n' "-H" "Authorization: Bearer $TOKEN"
+  fi
+}
+
 http_get() {
   local url="$1"
-  curl -sS -H "Accept: application/json" "$url"
+  if [[ -n "$TOKEN" ]]; then
+    curl -sS -H "Accept: application/json" -H "Authorization: Bearer $TOKEN" "$url"
+  else
+    curl -sS -H "Accept: application/json" "$url"
+  fi
 }
 
 http_post_json() {
   local url="$1"
   local payload="$2"
-  curl -sS -X POST "$url" \
-    -H "Content-Type: application/json" \
-    -H "Accept: application/json" \
-    -d "$payload"
+  if [[ -n "$TOKEN" ]]; then
+    curl -sS -X POST "$url" \
+      -H "Content-Type: application/json" \
+      -H "Accept: application/json" \
+      -H "Authorization: Bearer $TOKEN" \
+      -d "$payload"
+  else
+    curl -sS -X POST "$url" \
+      -H "Content-Type: application/json" \
+      -H "Accept: application/json" \
+      -d "$payload"
+  fi
 }
 
 main() {
