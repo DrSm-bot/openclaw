@@ -1,6 +1,6 @@
 ---
 name: rimworld-gm
-description: Control a local Rimworld Game Master mod over HTTP for MVP gameplay testing. Use when asked to check colony status, trigger events, or send in-game messages via the Rimworld API endpoints (/health, /state, /event, /message), especially during Steam Deck + SSH tunnel dev workflows.
+description: Control a local or LAN-exposed Rimworld Game Master mod over HTTP for MVP gameplay testing. Use when asked to check colony status, trigger events, or send in-game messages via the Rimworld API endpoints (/health, /state, /event, /message), including LAN mode with Bearer token authentication.
 ---
 
 # Rimworld GM Skill
@@ -8,9 +8,9 @@ description: Control a local Rimworld Game Master mod over HTTP for MVP gameplay
 ## Status
 
 ✅ Tested end-to-end and working:
-- VM (OpenClaw host) -> SSH tunnel -> Steam Deck -> Rimworld mod
-- Health/state reads confirmed
-- In-game message delivery confirmed
+- VM (OpenClaw host) -> Steam Deck over LAN (no SSH tunnel)
+- Token auth in LAN mode verified (`401 UNAUTHORIZED` without token)
+- Health/state reads and in-game message delivery confirmed
 
 Use the bundled CLI wrapper:
 
@@ -18,20 +18,28 @@ Use the bundled CLI wrapper:
 ./scripts/rimworld-gm.sh <command> [args...]
 ```
 
-## Steam Deck Setup Guide
+## Setup Modes
 
-1. Enable SSH on Deck and confirm IP.
-2. Keep Rimworld running with the RimworldGM mod enabled.
-3. On VM, open tunnel:
-
-```bash
-ssh -N -L 18800:localhost:18800 deck@<deck-ip>
-```
-
-4. Optional endpoint override:
+### Local mode (default, safest)
 
 ```bash
 RIMWORLD_GM_URL=http://localhost:18800
+```
+
+No token required in local-only mode.
+
+### LAN mode (Phase 3a)
+
+In mod `Settings.xml`:
+- `bindAddress=0.0.0.0`
+- `allowLan=true`
+- set strong `authToken`
+
+In shell:
+
+```bash
+export RIMWORLD_GM_URL="http://<deck-ip>:18800"
+export RIMWORLD_GM_TOKEN="<authToken>"
 ```
 
 ## Commands
@@ -50,88 +58,57 @@ RIMWORLD_GM_URL=http://localhost:18800
 ./scripts/rimworld-gm.sh message <text> [type]
 ```
 
-## Event examples
+## LAN examples (with token)
 
 ```bash
+export RIMWORLD_GM_URL="http://192.168.178.42:18800"
+export RIMWORLD_GM_TOKEN="your_secret_token"
+
+./scripts/rimworld-gm.sh status
+./scripts/rimworld-gm.sh state
 ./scripts/rimworld-gm.sh event cargo_pod
-./scripts/rimworld-gm.sh event solar_flare 400
-./scripts/rimworld-gm.sh event raid 500
-```
-
-## Message examples
-
-```bash
-./scripts/rimworld-gm.sh message "Hello colonists" info
-./scripts/rimworld-gm.sh message "Brace yourselves" dramatic
-```
-
-## Example `/state` output (truncated)
-
-```json
-{
-  "colony": {
-    "name": "Colony",
-    "wealth": 262000,
-    "day": 37,
-    "season": "Summer",
-    "quadrum": "Jugust"
-  },
-  "colonists": [
-    { "name": "PsychoBell", "mood": 92, "health": 100 },
-    { "name": "CookWare", "mood": 100, "health": 100 }
-  ],
-  "resources": {
-    "silver": 0,
-    "food": 45,
-    "medicine": 12,
-    "components": 8
-  },
-  "threats": {
-    "active_raids": 0,
-    "nearby_enemies": false,
-    "toxic_fallout": false
-  }
-}
+./scripts/rimworld-gm.sh message "Clawd is watching..." dramatic
 ```
 
 ## Troubleshooting
 
+- **`UNAUTHORIZED`**
+  - LAN mode requires token.
+  - Check `RIMWORLD_GM_TOKEN` and token value in mod config.
 - **`MOD_NOT_READY`**
-  - Game is paused/loading or map not active.
-  - Resume game and retry `status`/`state`.
-- **Tunnel not working**
-  - Reopen tunnel: `ssh -N -L 18800:localhost:18800 deck@<deck-ip>`
-  - Validate from VM: `curl http://localhost:18800/health`
+  - Game paused/loading or no active colony map.
+  - Resume game and retry.
+- **No connection / timeout**
+  - Verify Deck IP and firewall/network reachability.
+  - Confirm mod is running and bound to expected interface.
 - **Build/deploy mismatch**
-  - Ensure latest `RimworldGM.dll` is in Deck mod folder after rebuild.
+  - Ensure latest `RimworldGM.dll` was copied to Deck mod folder.
 
 ## Common Commands (Quick Reference)
 
 ```bash
-# Check health
-./scripts/rimworld-gm.sh status
+# Local mode
+RIMWORLD_GM_URL=http://localhost:18800 ./scripts/rimworld-gm.sh status
 
-# Full colony snapshot
+# LAN mode
+RIMWORLD_GM_URL=http://<deck-ip>:18800 RIMWORLD_GM_TOKEN=<token> ./scripts/rimworld-gm.sh status
+
+# Safe checks
 ./scripts/rimworld-gm.sh state
-
-# Safe event
-./scripts/rimworld-gm.sh event cargo_pod
-
-# In-game message
-./scripts/rimworld-gm.sh message "Clawd is watching..." dramatic
+./scripts/rimworld-gm.sh message "RimworldGM test" info
 ```
 
 ## "Läuft alles?" Checkliste
 
 - [ ] Rimworld running with active colony
-- [ ] SSH tunnel active on VM
+- [ ] Mod config set correctly (local or LAN)
+- [ ] In LAN mode: token set in env + config
 - [ ] `status` returns `game_running: true`
 - [ ] `state` returns colony data
-- [ ] `message` is visible in game
+- [ ] `message` visible in game
 
 ## Known limitations
 
-- Game must be running with an active colony map loaded for `/state`, `/event`, and `/message`.
-- If the game is paused/loading, API can return `MOD_NOT_READY`.
-- `scripts/test-api.py --base-url ...` can trigger non-harmless events (including raids) depending on parameters.
-- Tunnel must stay active for remote Deck control from VM.
+- `/state`, `/event`, `/message` need active colony map.
+- Dangerous events can be blocked by server policy (`enableDangerousEvents=false`).
+- CIDR allowlist is not yet enforced in v1.
