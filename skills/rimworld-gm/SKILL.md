@@ -5,20 +5,34 @@ description: Control a local Rimworld Game Master mod over HTTP for MVP gameplay
 
 # Rimworld GM Skill
 
+## Status
+
+✅ Tested end-to-end and working:
+- VM (OpenClaw host) -> SSH tunnel -> Steam Deck -> Rimworld mod
+- Health/state reads confirmed
+- In-game message delivery confirmed
+
 Use the bundled CLI wrapper:
 
 ```bash
 ./scripts/rimworld-gm.sh <command> [args...]
 ```
 
-## Preconditions
+## Steam Deck Setup Guide
 
-- Ensure Rimworld is running with the RimworldGM mod enabled.
-- Ensure API is reachable from this host (for remote Deck testing, keep SSH tunnel active):
-  - `ssh -N -L 18800:localhost:18800 deck@<deck-ip>`
-- Default API base URL is `http://localhost:18800`.
-- Override endpoint via env var if needed:
-  - `RIMWORLD_GM_URL=http://127.0.0.1:18800`
+1. Enable SSH on Deck and confirm IP.
+2. Keep Rimworld running with the RimworldGM mod enabled.
+3. On VM, open tunnel:
+
+```bash
+ssh -N -L 18800:localhost:18800 deck@<deck-ip>
+```
+
+4. Optional endpoint override:
+
+```bash
+RIMWORLD_GM_URL=http://localhost:18800
+```
 
 ## Commands
 
@@ -51,7 +65,38 @@ Use the bundled CLI wrapper:
 ./scripts/rimworld-gm.sh message "Brace yourselves" dramatic
 ```
 
-## Notes
+## Example `/state` output (truncated)
 
-- The contract test script may trigger non-harmless events depending on configuration.
-- Prefer manual/safe endpoint checks in active gameplay sessions when needed.
+```json
+{
+  "colony": {
+    "name": "Colony",
+    "wealth": 262000,
+    "day": 37,
+    "season": "Summer",
+    "quadrum": "Jugust"
+  },
+  "colonists": [
+    { "name": "PsychoBell", "mood": 92, "health": 100 },
+    { "name": "CookWare", "mood": 100, "health": 100 }
+  ],
+  "resources": {
+    "silver": 0,
+    "food": 45,
+    "medicine": 12,
+    "components": 8
+  },
+  "threats": {
+    "active_raids": 0,
+    "nearby_enemies": false,
+    "toxic_fallout": false
+  }
+}
+```
+
+## Known limitations
+
+- Game must be running with an active colony map loaded for `/state`, `/event`, and `/message`.
+- If the game is paused/loading, API can return `MOD_NOT_READY`.
+- `scripts/test-api.py --base-url ...` can trigger non-harmless events (including raids) depending on parameters.
+- Tunnel must stay active for remote Deck control from VM.
