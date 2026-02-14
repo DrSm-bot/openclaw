@@ -94,6 +94,41 @@ RIMWORLD_GM_URL=http://localhost:18800
 }
 ```
 
+## Troubleshooting
+
+- **`MOD_NOT_READY`**
+  - Game is paused/loading or map not active.
+  - Resume game and retry `status`/`state`.
+- **Tunnel not working**
+  - Reopen tunnel: `ssh -N -L 18800:localhost:18800 deck@<deck-ip>`
+  - Validate from VM: `curl http://localhost:18800/health`
+- **Build/deploy mismatch**
+  - Ensure latest `RimworldGM.dll` is in Deck mod folder after rebuild.
+
+## Common Commands (Quick Reference)
+
+```bash
+# Check health
+./scripts/rimworld-gm.sh status
+
+# Full colony snapshot
+./scripts/rimworld-gm.sh state
+
+# Safe event
+./scripts/rimworld-gm.sh event cargo_pod
+
+# In-game message
+./scripts/rimworld-gm.sh message "Clawd is watching..." dramatic
+```
+
+## "Läuft alles?" Checkliste
+
+- [ ] Rimworld running with active colony
+- [ ] SSH tunnel active on VM
+- [ ] `status` returns `game_running: true`
+- [ ] `state` returns colony data
+- [ ] `message` is visible in game
+
 ## Known limitations
 
 - Game must be running with an active colony map loaded for `/state`, `/event`, and `/message`.
